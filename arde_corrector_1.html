@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="gl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARDE — Corrector de Descricións</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black: #161615;
+    --white: #f5f4f0;
+    --mid: #e8e6e0;
+    --grey: #9a9890;
+    --accent: #161615;
+    --border: 1px solid #161615;
+  }
+
+  body {
+    background: var(--white);
+    color: var(--black);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  header {
+    border-bottom: var(--border);
+    padding: 0 40px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: var(--white);
+    z-index: 10;
+  }
+
+  .logo svg { display: block; }
+
+  .header-label {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--grey);
+    font-weight: 400;
+  }
+
+  /* MAIN LAYOUT */
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: calc(100vh - 56px);
+  }
+
+  .panel {
+    padding: 48px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+    max-height: calc(100vh - 56px);
+  }
+
+  .panel-left {
+    border-right: var(--border);
+  }
+
+  .panel-title {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--grey);
+    font-weight: 400;
+    padding-bottom: 16px;
+    border-bottom: var(--border);
+    margin-bottom: 4px;
+  }
+
+  textarea {
+    flex: 1;
+    min-height: 320px;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+    font-family: 'DM Mono', monospace;
+    font-size: 13.5px;
+    font-weight: 300;
+    line-height: 1.75;
+    color: var(--black);
+    width: 100%;
+  }
+
+  textarea::placeholder {
+    color: var(--grey);
+    font-style: italic;
+  }
+
+  /* ACTIONS */
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-top: 20px;
+    border-top: var(--border);
+    margin-top: auto;
+  }
+
+  button.primary {
+    background: var(--black);
+    color: var(--white);
+    border: var(--border);
+    padding: 11px 28px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  button.primary:hover:not(:disabled) {
+    background: var(--grey);
+    border-color: var(--grey);
+  }
+
+  button.primary:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  button.secondary {
+    background: transparent;
+    color: var(--grey);
+    border: 1px solid var(--mid);
+    padding: 11px 20px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  button.secondary:hover:not(:disabled) {
+    border-color: var(--black);
+    color: var(--black);
+  }
+
+  button.secondary:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* CHAR COUNT */
+  .char-count {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--grey);
+    font-family: 'DM Mono', monospace;
+    font-weight: 300;
+  }
+
+  /* OUTPUT PANEL */
+  .output-area {
+    flex: 1;
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .output-empty {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--grey);
+    font-size: 13px;
+    font-style: italic;
+    font-family: 'DM Mono', monospace;
+    font-weight: 300;
+  }
+
+  /* LOADING */
+  .loading-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 12px;
+    padding: 8px 0;
+  }
+
+  .loading-bar-wrap {
+    width: 100%;
+    height: 1px;
+    background: var(--mid);
+    overflow: hidden;
+  }
+
+  .loading-bar {
+    height: 100%;
+    background: var(--black);
+    width: 0%;
+    animation: loadprogress 2.2s ease-in-out infinite;
+  }
+
+  @keyframes loadprogress {
+    0% { width: 0%; margin-left: 0; }
+    50% { width: 70%; margin-left: 0; }
+    100% { width: 0%; margin-left: 100%; }
+  }
+
+  .loading-label {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--grey);
+    font-weight: 400;
+  }
+
+  /* RESULT BLOCKS */
+  .result-block {
+    border-bottom: var(--border);
+    padding: 20px 0;
+  }
+
+  .result-block:first-child { padding-top: 0; }
+  .result-block:last-child { border-bottom: none; }
+
+  .result-label {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--grey);
+    font-weight: 400;
+    margin-bottom: 10px;
+  }
+
+  .result-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 13.5px;
+    font-weight: 300;
+    line-height: 1.75;
+    color: var(--black);
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .result-justification {
+    font-size: 12.5px;
+    line-height: 1.65;
+    color: #555;
+    font-weight: 300;
+  }
+
+  /* COPY BUTTON inside output */
+  .copy-btn {
+    background: transparent;
+    border: 1px solid var(--mid);
+    color: var(--grey);
+    padding: 6px 14px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .copy-btn:hover { border-color: var(--black); color: var(--black); }
+  .copy-btn.copied { border-color: var(--black); color: var(--black); }
+
+  /* API KEY BANNER */
+  .api-banner {
+    background: var(--black);
+    color: var(--white);
+    padding: 12px 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    font-weight: 300;
+  }
+
+  .api-banner input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255,255,255,0.3);
+    color: var(--white);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 300;
+    outline: none;
+    padding: 2px 6px;
+    width: 280px;
+    transition: border-color 0.15s;
+  }
+
+  .api-banner input::placeholder { color: rgba(255,255,255,0.35); }
+  .api-banner input:focus { border-color: rgba(255,255,255,0.8); }
+
+  .api-banner label {
+    color: rgba(255,255,255,0.55);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .api-banner .api-ok {
+    color: rgba(255,255,255,0.45);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-left: auto;
+    display: none;
+  }
+
+  .api-banner .api-ok.visible { display: block; }
+
+  /* SLASH DECORATION */
+  .slash-deco {
+    color: var(--grey);
+    font-weight: 300;
+    opacity: 0.4;
+    margin: 0 2px;
+  }
+
+  /* ERROR */
+  .error-msg {
+    font-size: 12px;
+    color: #b94040;
+    font-family: 'DM Mono', monospace;
+    padding: 12px 0;
+    border-top: 1px solid #b94040;
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: var(--border);
+    padding: 14px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--grey);
+    letter-spacing: 0.06em;
+  }
+
+  @media (max-width: 768px) {
+    main { grid-template-columns: 1fr; }
+    .panel-left { border-right: none; border-bottom: var(--border); }
+    header, .panel, .api-banner, footer { padding-left: 20px; padding-right: 20px; }
+  }
+
+  /* PASSWORD GATE */
+  #gate {
+    position: fixed;
+    inset: 0;
+    background: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+
+  .gate-box {
+    width: 400px;
+    border: var(--border);
+    padding: 48px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .gate-logo { margin-bottom: 8px; }
+
+  .gate-title {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--grey);
+    font-weight: 400;
+  }
+
+  .gate-input {
+    background: transparent;
+    border: none;
+    border-bottom: var(--border);
+    outline: none;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 300;
+    padding: 8px 0;
+    width: 100%;
+    color: var(--black);
+  }
+
+  .gate-input::placeholder { color: var(--grey); }
+
+  .gate-error {
+    font-size: 11px;
+    color: #b94040;
+    font-family: 'DM Mono', monospace;
+    display: none;
+  }
+
+  .gate-error.visible { display: block; }
+</style>
+</head>
+<body>
+
+<!-- PASSWORD GATE -->
+<div id="gate">
+  <div class="gate-box">
+    <div class="gate-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" width="90" height="29" viewBox="0 0 145 47">
+        <g fill="#161615" fill-rule="nonzero">
+          <path d="M0 30.812 7.924 0h12.544l8.143 30.812h-5.282l-2.112-7.922H7.044l-1.982 7.922zm8.363-12.765h11.621L16.505 4.841h-4.841zM32.01 30.813V0h13.424q5.459 0 8.673 2.817A9.03 9.03 0 0 1 57.323 9.9a9.2 9.2 0 0 1-2.091 5.964 10.48 10.48 0 0 1-5.831 3.5l7.7 11.446h-5.944l-7.262-11h-6.823v11zm5.062-15.848h8.363q6.6 0 6.6-5.062t-6.6-5.063h-8.363zM58.253.026h5.382l25.38 46.141h-5.387zM92.283 46.193v-30.76h10.326a16.45 16.45 0 0 1 11.821 4.439 14.52 14.52 0 0 1 4.659 10.94 14.52 14.52 0 0 1-4.659 10.943 16.45 16.45 0 0 1-11.821 4.438zm5.053-4.834h5.273c2.994.14 5.92-.92 8.129-2.945a10.05 10.05 0 0 0 3.078-7.6c.1-2.856-1.019-5.62-3.078-7.6a11.27 11.27 0 0 0-8.129-2.945h-5.273zM122.201 46.193v-30.76h22.192v4.832h-17.139v7.907h13.843v4.834h-13.843v8.349h17.139v4.834z"/>
+        </g>
+      </svg>
+    </div>
+    <div class="gate-title">Corrector de Descricións <span class="slash-deco">/</span> Acceso</div>
+    <input class="gate-input" type="password" id="gateInput" placeholder="Contrasinal de acceso…" autocomplete="off" />
+    <button class="primary" onclick="submitGate()"><span>Acceder</span> <span style="opacity:0.5;font-size:14px">→</span></button>
+    <div class="gate-error" id="gateError">Contrasinal incorrecto</div>
+  </div>
+</div>
+
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <svg xmlns="http://www.w3.org/2000/svg" width="108" height="35" viewBox="0 0 145 47">
+      <g fill="#161615" fill-rule="nonzero">
+        <path d="M0 30.812 7.924 0h12.544l8.143 30.812h-5.282l-2.112-7.922H7.044l-1.982 7.922zm8.363-12.765h11.621L16.505 4.841h-4.841zM32.01 30.813V0h13.424q5.459 0 8.673 2.817A9.03 9.03 0 0 1 57.323 9.9a9.2 9.2 0 0 1-2.091 5.964 10.48 10.48 0 0 1-5.831 3.5l7.7 11.446h-5.944l-7.262-11h-6.823v11zm5.062-15.848h8.363q6.6 0 6.6-5.062t-6.6-5.063h-8.363zM58.253.026h5.382l25.38 46.141h-5.387zM92.283 46.193v-30.76h10.326a16.45 16.45 0 0 1 11.821 4.439 14.52 14.52 0 0 1 4.659 10.94 14.52 14.52 0 0 1-4.659 10.943 16.45 16.45 0 0 1-11.821 4.438zm5.053-4.834h5.273c2.994.14 5.92-.92 8.129-2.945a10.05 10.05 0 0 0 3.078-7.6c.1-2.856-1.019-5.62-3.078-7.6a11.27 11.27 0 0 0-8.129-2.945h-5.273zM122.201 46.193v-30.76h22.192v4.832h-17.139v7.907h13.843v4.834h-13.843v8.349h17.139v4.834z"/>
+      </g>
+    </svg>
+  </div>
+  <span class="header-label">Corrector de Descricións <span class="slash-deco">/</span> Fichas de Catalogación</span>
+</header>
+
+<!-- MAIN -->
+<main>
+  <!-- LEFT: INPUT -->
+  <div class="panel panel-left">
+    <div class="panel-title">Descrición orixinal</div>
+    <textarea id="inputText" placeholder="Pega aquí o texto da descrición que queres revisar…" spellcheck="false"></textarea>
+    <div class="actions">
+      <button class="primary" id="submitBtn" onclick="runCorrection()" disabled>
+        <span>Revisar</span>
+        <span style="opacity:0.5; font-size:14px">→</span>
+      </button>
+      <button class="secondary" id="clearBtn" onclick="clearAll()" disabled>Limpar</button>
+      <span class="char-count" id="charCount">0 car.</span>
+    </div>
+  </div>
+
+  <!-- RIGHT: OUTPUT -->
+  <div class="panel panel-right">
+    <div class="panel-title">Resultado</div>
+    <div class="output-area" id="outputArea">
+      <div class="output-empty" id="emptyState">O texto corrixido aparecerá aquí</div>
+    </div>
+  </div>
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <span>Arquivo do Deseño Galego <span class="slash-deco">/</span> DAG Asociación Galega de Deseño</span>
+  <span>Galego normativo ILG-RAG</span>
+</footer>
+
+<script>
+const API_KEY = getApiKey();
+
+const SYSTEM_PROMPT = `Este asistente revisa exclusivamente o campo de descrición das fichas de catalogación. Limítase a corrixir redacción, puntuación, formato e adecuación lingüística ao galego normativo segundo a normativa oficial do ILG-RAG, sen modificar nin inferir datos novos. Os textos resultantes deben ser neutrais, claros, concisos e de lectura doada, baseados unicamente en información obxectiva presente no texto orixinal. Deben ser atemporais, evitando referencias ao momento actual ou expresións contextuais temporais. Mantén o idioma do texto de entrada, pero se non está en galego normativo, traduce e adapta con precisión e coherencia terminolóxica segundo a normativa ILG-RAG. Traducirá tamén ao galego calquera cita ou fragmento en castelán, sempre preservando o seu sentido orixinal. Revisará a coherencia terminolóxica en campos técnicos, incluíndo termos bibliográficos, nomes de institucións, lugares e formas normalizadas de publicación.
+
+REGRA OBRIGATORIA DE COMIÑAS: No texto corrixido, TODAS as comiñas deben ser dobres curvas tipográficas “ e ”. Substitúe sen excepción: comiñas rectas dobres ("), comiñas rectas simples (' e '), angulares (« e »), e calquera outra variante. Non debe quedar nin unha soa comiña que non sexa “ ou ”.
+
+Responde ÚNICAMENTE cun obxecto JSON válido con esta estrutura, sen texto adicional antes nin despois:
+{"texto_corrixido": "...", "xustificacion": "..."}`;
+
+const inputText = document.getElementById('inputText');
+const submitBtn = document.getElementById('submitBtn');
+const clearBtn = document.getElementById('clearBtn');
+const charCount = document.getElementById('charCount');
+const outputArea = document.getElementById('outputArea');
+
+inputText.addEventListener('input', () => {
+  const len = inputText.value.length;
+  charCount.textContent = len.toLocaleString('gl') + ' car.';
+  updateButtons();
+});
+
+function updateButtons() {
+  const hasText = inputText.value.trim().length > 0;
+  submitBtn.disabled = !hasText;
+  clearBtn.disabled = !hasText;
+}
+
+function clearAll() {
+  inputText.value = '';
+  charCount.textContent = '0 car.';
+  outputArea.innerHTML = '<div class="output-empty" id="emptyState">O texto corrixido aparecerá aquí</div>';
+  updateButtons();
+}
+
+async function runCorrection() {
+  const text = inputText.value.trim();
+  if (!text) return;
+  const apiKey = API_KEY;
+
+  submitBtn.disabled = true;
+  submitBtn.querySelector('span').textContent = 'Revisando…';
+
+  outputArea.innerHTML = `
+    <div class="loading-state">
+      <div class="loading-label">Analizando o texto</div>
+      <div class="loading-bar-wrap"><div class="loading-bar"></div></div>
+    </div>`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: text }]
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `Erro ${response.status}`);
+    }
+
+    const data = await response.json();
+    const raw = data.content.map(b => b.text || '').join('');
+    const src = raw.replace(/^```json[\s]*/,'').replace(/```[\s]*$/,'').trim();
+
+    function extractField(key) {
+      const keyPattern = '"' + key + '": "';
+      const keyIdx = src.indexOf(keyPattern);
+      if (keyIdx === -1) return '';
+      const from = keyIdx + keyPattern.length;
+      if (key === 'texto_corrixido') {
+        const endIdx = src.indexOf('", "xustificacion"', from);
+        return endIdx === -1 ? '' : src.slice(from, endIdx);
+      } else {
+        const endIdx = src.lastIndexOf('"}');
+        return endIdx === -1 ? '' : src.slice(from, endIdx);
+      }
+    }
+
+    const corrixido     = extractField('texto_corrixido');
+    const xustificacion = extractField('xustificacion');
+
+    if (!corrixido) throw new Error('Non foi posible interpretar a resposta do modelo.');
+    renderResult(corrixido, xustificacion);
+
+  } catch (err) {
+    outputArea.innerHTML = `<div class="error-msg">⚠ ${err.message}</div>`;
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.querySelector('span').textContent = 'Revisar';
+    updateButtons();
+  }
+}
+
+function normalizeQuotes(text) {
+  // Replace all quote variants with typographic curved double quotes
+  // First handle angular quotes
+  text = text.replace(/«/g, '“');
+  text = text.replace(/»/g, '”');
+  // Straight double quotes — opening (preceded by space, start, or opening bracket)
+  text = text.replace(/(^|[\s(\[{>])"/g, '$1“');
+  // Remaining straight double quotes become closing
+  text = text.replace(/"/g, '”');
+  // Single quotes — opening
+  text = text.replace(/(^|[\s(\[{>])'/g, '$1“');
+  // Remaining single quotes become closing
+  text = text.replace(/'/g, '”');
+  // Also handle curly single quotes used as doubles
+  text = text.replace(/‘/g, '“');
+  text = text.replace(/’/g, '”');
+  return text;
+}
+
+let _lastCorrected = '';
+
+function renderResult(corrected, justification) {
+  corrected = normalizeQuotes(corrected);
+  _lastCorrected = corrected;
+  outputArea.innerHTML = `
+    <div class="result-block">
+      <div class="result-label">Texto corrixido</div>
+      <div class="result-text" id="correctedText">${escHtml(corrected)}</div>
+      <button class="copy-btn" id="copyBtn" onclick="copyText()">
+        <span>Copiar</span>
+      </button>
+    </div>
+    <div class="result-block">
+      <div class="result-label">Xustificación técnica</div>
+      <div class="result-justification">${escHtml(justification)}</div>
+    </div>`;
+}
+
+function copyText() {
+  const text = _lastCorrected || document.getElementById('correctedText')?.innerText || '';
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.classList.add('copied');
+    btn.querySelector('span').textContent = '✓ Copiado';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.querySelector('span').textContent = 'Copiar';
+    }, 2000);
+  });
+}
+
+function escHtml(str) {
+  // Do NOT escape curved quotes “ ”
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// The password IS the API key — colleagues enter it once, stored in localStorage
+function getApiKey() {
+  return localStorage.getItem('arde_api_key') || '';
+}
+
+function submitGate() {
+  const val = document.getElementById('gateInput').value.trim();
+  if (val.startsWith('sk-ant-')) {
+    localStorage.setItem('arde_api_key', val);
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('gateError').classList.remove('visible');
+  } else {
+    document.getElementById('gateError').classList.add('visible');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('gateInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitGate();
+  });
+  // If key already stored, skip gate
+  if (localStorage.getItem('arde_api_key')) {
+    document.getElementById('gate').style.display = 'none';
+  }
+});
+
+</script>
+</body>
+</html>
