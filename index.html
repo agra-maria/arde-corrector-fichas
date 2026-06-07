@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="gl">
 <head>
@@ -491,7 +492,6 @@
 </footer>
 
 <script>
-const API_KEY = getApiKey();
 
 const SYSTEM_PROMPT = `Este asistente revisa exclusivamente o campo de descrición das fichas de catalogación. Limítase a corrixir redacción, puntuación, formato e adecuación lingüística ao galego normativo segundo a normativa oficial do ILG-RAG, sen modificar nin inferir datos novos. Os textos resultantes deben ser neutrais, claros, concisos e de lectura doada, baseados unicamente en información obxectiva presente no texto orixinal. Deben ser atemporais, evitando referencias ao momento actual ou expresións contextuais temporais. Mantén o idioma do texto de entrada, pero se non está en galego normativo, traduce e adapta con precisión e coherencia terminolóxica segundo a normativa ILG-RAG. Traducirá tamén ao galego calquera cita ou fragmento en castelán, sempre preservando o seu sentido orixinal. Revisará a coherencia terminolóxica en campos técnicos, incluíndo termos bibliográficos, nomes de institucións, lugares e formas normalizadas de publicación.
 
@@ -528,7 +528,7 @@ function clearAll() {
 async function runCorrection() {
   const text = inputText.value.trim();
   if (!text) return;
-  const apiKey = API_KEY;
+  const apiKey = localStorage.getItem('arde_api_key') || '';
 
   submitBtn.disabled = true;
   submitBtn.querySelector('span').textContent = 'Revisando…';
