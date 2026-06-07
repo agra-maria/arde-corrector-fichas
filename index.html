@@ -568,29 +568,23 @@ async function runCorrection() {
     // Extract texto_corrixido: everything between its opening value quote and ", "xustificacion"
     // Extract xustificacion: everything between its opening value quote and the final "}
     // We find boundaries by searching for the literal key+delimiter strings
-    function extractBetween(src, startMarker, endMarker, fromEnd) {
-      const startIdx = src.indexOf(startMarker);
-      if (startIdx === -1) return null;
-      const from = startIdx + startMarker.length;
+    function extractBetween(src, key, endMarker, fromEnd) {
+      // Find the key regardless of spacing around : and opening quote
+      const keyIdx = src.indexOf('"' + key + '"');
+      if (keyIdx === -1) return null;
+      // Find opening quote of value (first " after the key + colon)
+      let from = keyIdx + key.length + 2; // skip key and surrounding quotes
+      while (from < src.length && src[from] !== '"') from++;
+      from++; // skip opening quote
+      if (from >= src.length) return null;
+      // Find end marker
       const endIdx = fromEnd ? src.lastIndexOf(endMarker) : src.indexOf(endMarker, from);
       if (endIdx === -1 || endIdx <= from) return null;
       return src.slice(from, endIdx);
     }
 
-    let corrixido = extractBetween(src, '"texto_corrixido": "', '", "xustificacion"', false);
-    if (!corrixido) corrixido = extractBetween(src, '"texto_corrixido":"', '","xustificacion"', false);
-
-    let xustificacion = extractBetween(src, '"xustificacion": "', '"}', true);
-    if (!xustificacion) xustificacion = extractBetween(src, '"xustificacion":"', '"}', true);
-
-    // Last resort: try to extract anything after xustificacion key
-    if (!xustificacion) {
-      const xi = src.lastIndexOf('"xustificacion"');
-      if (xi !== -1) {
-        const qi = src.indexOf('"', xi + 15) + 1;
-        xustificacion = src.slice(qi, src.lastIndexOf('"'));
-      }
-    }
+    let corrixido     = extractBetween(src, 'texto_corrixido', '"xustificacion"', false);
+    let xustificacion = extractBetween(src, 'xustificacion',   '"}',              true);
 
     if (!corrixido) throw new Error('Non foi posible interpretar a resposta do modelo. RAW: ' + src.slice(0, 200));
     renderResult(corrixido, xustificacion || '');
