@@ -565,25 +565,35 @@ async function runCorrection() {
     const raw = data.content.map(b => b.text || '').join('');
     const src = raw.replace(/^```json[\s]*/,'').replace(/```[\s]*$/,'').trim();
 
-    function extractField(key) {
-      const keyPattern = '"' + key + '": "';
-      const keyIdx = src.indexOf(keyPattern);
-      if (keyIdx === -1) return '';
-      const from = keyIdx + keyPattern.length;
-      if (key === 'texto_corrixido') {
-        const endIdx = src.indexOf('", "xustificacion"', from);
-        return endIdx === -1 ? '' : src.slice(from, endIdx);
-      } else {
-        const endIdx = src.lastIndexOf('"}');
-        return endIdx === -1 ? '' : src.slice(from, endIdx);
+    // Extract texto_corrixido: everything between its opening value quote and ", "xustificacion"
+    // Extract xustificacion: everything between its opening value quote and the final "}
+    // We find boundaries by searching for the literal key+delimiter strings
+    function extractBetween(src, startMarker, endMarker, fromEnd) {
+      const startIdx = src.indexOf(startMarker);
+      if (startIdx === -1) return null;
+      const from = startIdx + startMarker.length;
+      const endIdx = fromEnd ? src.lastIndexOf(endMarker) : src.indexOf(endMarker, from);
+      if (endIdx === -1 || endIdx <= from) return null;
+      return src.slice(from, endIdx);
+    }
+
+    let corrixido = extractBetween(src, '"texto_corrixido": "', '", "xustificacion"', false);
+    if (!corrixido) corrixido = extractBetween(src, '"texto_corrixido":"', '","xustificacion"', false);
+
+    let xustificacion = extractBetween(src, '"xustificacion": "', '"}', true);
+    if (!xustificacion) xustificacion = extractBetween(src, '"xustificacion":"', '"}', true);
+
+    // Last resort: try to extract anything after xustificacion key
+    if (!xustificacion) {
+      const xi = src.lastIndexOf('"xustificacion"');
+      if (xi !== -1) {
+        const qi = src.indexOf('"', xi + 15) + 1;
+        xustificacion = src.slice(qi, src.lastIndexOf('"'));
       }
     }
 
-    const corrixido     = extractField('texto_corrixido');
-    const xustificacion = extractField('xustificacion');
-
-    if (!corrixido) throw new Error('Non foi posible interpretar a resposta do modelo.');
-    renderResult(corrixido, xustificacion);
+    if (!corrixido) throw new Error('Non foi posible interpretar a resposta do modelo. RAW: ' + src.slice(0, 200));
+    renderResult(corrixido, xustificacion || '');
 
   } catch (err) {
     outputArea.innerHTML = `<div class="error-msg">⚠ ${err.message}</div>`;
