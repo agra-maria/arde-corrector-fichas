@@ -568,23 +568,31 @@ async function runCorrection() {
     // Extract texto_corrixido: everything between its opening value quote and ", "xustificacion"
     // Extract xustificacion: everything between its opening value quote and the final "}
     // We find boundaries by searching for the literal key+delimiter strings
-    function extractBetween(src, key, endMarker, fromEnd) {
-      // Find the key regardless of spacing around : and opening quote
-      const keyIdx = src.indexOf('"' + key + '"');
-      if (keyIdx === -1) return null;
-      // Find opening quote of value (first " after the key + colon)
-      let from = keyIdx + key.length + 2; // skip key and surrounding quotes
-      while (from < src.length && src[from] !== '"') from++;
-      from++; // skip opening quote
-      if (from >= src.length) return null;
-      // Find end marker
-      const endIdx = fromEnd ? src.lastIndexOf(endMarker) : src.indexOf(endMarker, from);
-      if (endIdx === -1 || endIdx <= from) return null;
-      return src.slice(from, endIdx);
+    function getField(src, key) {
+      // Find "key" then skip to the opening quote of its value
+      const needle = '"' + key + '"';
+      const ki = src.indexOf(needle);
+      if (ki === -1) return null;
+      let i = ki + needle.length;
+      // skip whitespace and colon
+      while (i < src.length && (src[i] === ' ' || src[i] === ':')) i++;
+      // now at opening quote
+      if (src[i] !== '"') return null;
+      i++; // skip opening quote
+      const start = i;
+      // read until closing straight quote that is followed by whitespace/comma/}
+      while (i < src.length) {
+        if (src[i] === '"') {
+          const next = src[i+1];
+          if (next === ',' || next === ' ' || next === '}' || next === '\n' || next === '\r') break;
+        }
+        i++;
+      }
+      return src.slice(start, i);
     }
 
-    let corrixido     = extractBetween(src, 'texto_corrixido', '"xustificacion"', false);
-    let xustificacion = extractBetween(src, 'xustificacion',   '"}',              true);
+    const corrixido     = getField(src, 'texto_corrixido');
+    const xustificacion = getField(src, 'xustificacion');
 
     if (!corrixido) throw new Error('Non foi posible interpretar a resposta do modelo. RAW: ' + src.slice(0, 200));
     renderResult(corrixido, xustificacion || '');
