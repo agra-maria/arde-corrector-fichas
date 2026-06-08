@@ -569,21 +569,18 @@ async function runCorrection() {
     // Extract xustificacion: everything between its opening value quote and the final "}
     // We find boundaries by searching for the literal key+delimiter strings
     function getField(src, key) {
-      // Find "key" then skip to the opening quote of its value
       const needle = '"' + key + '"';
       const ki = src.indexOf(needle);
       if (ki === -1) return null;
       let i = ki + needle.length;
-      // skip whitespace and colon
       while (i < src.length && (src[i] === ' ' || src[i] === ':')) i++;
-      // now at opening quote
       if (src[i] !== '"') return null;
       i++; // skip opening quote
       const start = i;
-      // read until closing straight quote that is followed by whitespace/comma/}
       while (i < src.length) {
+        if (src[i] === '\\') { i += 2; continue; } // skip escaped char e.g. \"
         if (src[i] === '"') {
-          const next = src[i+1];
+          const next = src[i + 1];
           if (next === ',' || next === ' ' || next === '}' || next === '\n' || next === '\r') break;
         }
         i++;
@@ -628,12 +625,18 @@ function normalizeQuotes(text) {
 let _lastCorrected = '';
 
 function renderResult(corrected, justification) {
-  // Unescape JSON escape sequences
-  corrected     = corrected.replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\t/g, '\t');
-  justification = justification ? justification.replace(/\\"/g, '"').replace(/\\n/g, '\n') : '';
-  // Strip any trailing ", artefact from extraction
-  corrected     = corrected.replace(/",\s*$/, '').replace(/,\s*$/, '').trim();
-  justification = justification.replace(/",\s*$/, '').replace(/,\s*$/, '').trim();
+  // Unescape JSON escape sequences and strip trailing artefacts
+  function unescapeJson(s) {
+    return s
+      .replace(/\\"/g, '\"')      // \" -> "
+      .replace(/\\n/g, '\n')      // \n -> newline
+      .replace(/\\t/g, '\t')      // \t -> tab
+      .replace(/\\\\/g, '\\')  // \\ -> backslash
+      .replace(/[",\s]+$/, '')      // strip trailing ", or , artefacts
+      .trim();
+  }
+  corrected     = unescapeJson(corrected);
+  justification = justification ? unescapeJson(justification) : '';
   corrected = normalizeQuotes(corrected);
   _lastCorrected = corrected;
   outputArea.innerHTML = `
