@@ -628,6 +628,12 @@ function normalizeQuotes(text) {
 let _lastCorrected = '';
 
 function renderResult(corrected, justification) {
+  // Unescape JSON escape sequences
+  corrected     = corrected.replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+  justification = justification ? justification.replace(/\\"/g, '"').replace(/\\n/g, '\n') : '';
+  // Strip any trailing ", artefact from extraction
+  corrected     = corrected.replace(/",\s*$/, '').replace(/,\s*$/, '').trim();
+  justification = justification.replace(/",\s*$/, '').replace(/,\s*$/, '').trim();
   corrected = normalizeQuotes(corrected);
   _lastCorrected = corrected;
   outputArea.innerHTML = `
